@@ -1,0 +1,73 @@
+name: workflow totalization
+
+on:
+  workflow_dispatch:
+    inputs:
+      method:
+        description: '直近1ヶ月を取得するか、手動で取得期間を入力するか選択してください'
+        required: true
+        default: '1month'
+        type: choice
+        options:
+        - 1month
+        - manual
+      daystart:
+        description: '[manual選択時]実績状況の取得開始日をyyyy-MM-ddで入力してください。（例：2022-10-26）'
+        type: string
+      dayend:
+        description: '[manual選択時]実績状況の取得終了日をyyyy-MM-ddで入力してください。（例：2022-10-28）'
+        type: string
+
+permissions:
+  contents: read
+
+jobs:
+  workflowtotalization:
+    runs-on: ubuntu-latest
+    steps:
+      - if: ${{ github.event.inputs.method == '1month' }}
+        env:
+          TZ: 'Asia/Tokyo' # タイムゾーン指定
+        run: |
+          echo "CREATED='>$(date --date='1 months ago' +'%Y-%m-%d')'" >> $GITHUB_ENV
+          :
+      - if: ${{ github.event.inputs.method == 'manual' }}
+        run: |
+          echo "CREATED='${{ github.event.inputs.daystart }}..${{ github.event.inputs.dayend }}'" >> $GITHUB_ENV
+          :
+      - uses: actions/github-script@v6
+        with:
+          script: |
+            const result = await github.rest.actions.listWorkflowRunsForRepo({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              created: ${{ env.CREATED }}
+            })
+            
+            let workflows = {};
+            for(let workflow of result.data.workflow_runs){
+              let id = workflow.id;
+              const run = await github.rest.actions.listJobsForWorkflowRun({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                run_id: workflow.id,
+              });              
+              var diff = (new Date(run.data.jobs[0].completed_at).getTime()) - (new Date(run.data.jobs[0].started_at).getTime());
+              if(diff > 0){
+                if(workflow.name in workflows){
+                  workflows[workflow.name] += diff / 1000
+                } else {
+                  workflows[workflow.name] = diff / 1000
+                }
+              }
+            }
+            
+            let output = "";
+            for(let key in workflows){
+              output +=  key + " : " + workflows[key] + "s<br>";
+            }
+            
+            await core.summary
+              .addHeading('Workflows report')
+              .addRaw(output)
+              .write()

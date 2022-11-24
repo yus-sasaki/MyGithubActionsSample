@@ -1,0 +1,48 @@
+name: Publish - Nuget
+
+on:
+  workflow_dispatch:
+  workflow_run:
+    workflows: ["Build"]
+    branches: [ main ]
+    types:
+      - completed
+
+jobs:
+  publish-nuget:
+
+    runs-on: ubuntu-latest
+    env:
+      # slnファイルの存在するフォルダの相対パス
+      SolutionPath: src
+
+      # nupkgのビルド結果があるbinのパス
+      NugetPackagePath: src/SlackNotification/bin/Release
+      
+    steps:
+    - uses: actions/checkout@v2
+    - name: Setup .NET
+      uses: actions/setup-dotnet@v1
+      with:
+        dotnet-version: 3.1.x
+    - name: Install dependencies
+      run: dotnet restore
+      working-directory: src
+      
+    - name: Build
+      run: dotnet build src --no-restore
+      
+    - name: Pack
+      run: dotnet pack ${SolutionPath}  --configuration release
+   
+    - name: Pack 
+      run: dotnet pack ${SolutionPath}  --configuration release
+
+    - name: Add Source
+      run: 
+          dotnet nuget add source "https://nuget.pkg.github.com/miles-team/index.json" -n github -u ${{ secrets.NUGET_GITHUB_USER }} -p ${{ secrets.NUGET_GITHUB_TOKEN }} --store-password-in-clear-text
+
+    - name: Push
+      run: |
+          cd ${NugetPackagePath}
+          dotnet nuget push *.nupkg --source github --api-key ${{ secrets.NUGET_GITHUB_TOKEN }} --skip-duplicate

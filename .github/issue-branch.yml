@@ -1,0 +1,23 @@
+# Issue作成時に自動的に作成されるブランチの名称ルールを設定する
+
+# 組み込みの指定は以下です。”branchName: tiny”のように利用できます。　
+# tiny => iその後に発行番号が続きます。例：i15
+# short => 単語のissue後に発行番号が続きます。例： issue-15
+# full =>「issue」という単語の後に「issuenumber」の後に「issuetitle」を続けます。例：issue-15-Fix_nasty_bug
+
+# 独自のルールを設定する場合に利用できるプレースホルダー名は以下を参照ください。
+# https://github.com/robvanderleek/create-issue-branch/blob/main/tests/test-fixtures/issues.assigned.json
+# '${issue.number}-${issue.title}' => Issueの番号-Issueのタイトル。例： ”37-ImprovePerformanceForReviewGrid”　となる
+
+branchName: 'issue-${issue.number}'
+
+# プルリクエストのマージ後にIssueを自動的に閉じる機能の有効無効
+# 自動的に閉じるには"issue-XX"あるいは"iXX"（XXはIssue番号）のようなブランチ名が設定されている必要がある。
+
+autoCloseIssue: true
+
+# trueの場合、Issue作成後、コメントを作成しないと自動ブランチ作成が行われない
+# falseの場合、Assigneesが入れば自動でブランチが作成される。(IssuesAssignAuthor.ymlと組み合わせることでアサインも自動化可能)
+
+silent: false
+

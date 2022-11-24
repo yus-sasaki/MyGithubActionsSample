@@ -1,0 +1,82 @@
+name: SonarCloud
+# ワークフローが動作する条件を指定する
+on:
+  workflow_dispatch:
+  workflow_run:
+    workflows: ["Build"]
+    branches: [ main ]
+    types:
+      - completed
+
+# 仮想環境で行わせる動作を記述する
+jobs:
+  setup:
+    runs-on: windows-latest
+ 
+    # 環境変数
+    env:
+      # slnファイルの存在するフォルダの相対パス
+      SolutionPath: src
+    
+    steps:
+    
+    # リポジトリの内容をチェックアウトする
+    # fetch-depth に 0 を指定すると全タグ・全ブランチ・全履歴を取得するようになる
+    # デフォルトでは指定されたブランチの先頭コミットのみ取得しており、
+    # 場合によってはコマンドがエラーとなるため実行時間を短縮したいといった理由がなければ指定を推奨
+    - name: Checkout
+      uses: actions/checkout@v2
+      with:
+        fetch-depth: 0
+
+    # dotnet CLIを利用するためにdotNet環境を入れる
+    # dotnet-versionにはSDKバージョンを指定する
+    - name: Setup .NET
+      uses: actions/setup-dotnet@v1
+      with:
+        dotnet-version: 3.1.x
+        
+    - name: Set up JDK 11
+      uses: actions/setup-java@v1
+      with:
+        java-version: 1.11
+    
+    - name: Cache SonarScanner
+      id: cache-sonarscanner
+      uses: actions/cache@v2
+      with:
+        path: ~/.dotnet/tools
+        key: ${{ runner.os }}-SonarScanner
+
+    # SonarScannerをインストールする
+    - name: Install SonarScanner
+      if: steps.cache-sonarscanner.outputs.cache-hit != 'true'
+      run: dotnet tool install --global dotnet-sonarscanner
+    
+    # Testプロジェクトに対してcoverlet.msbuildをインストールします。
+    # dotnet add packageは1回のコマンドで複数プロジェクトへの動作をサポートしていないためTestプロジェクトの数だけコマンドを追記する必要があります。
+    - name: Package Add coverlet.msbuild
+      run: | 
+        dotnet add src/SlackNotification.Tests/SlackNotification.Tests.csproj package coverlet.msbuild
+        dotnet add src/NugetTest.Tests/NugetTest.Tests.csproj package coverlet.msbuild
+
+    - name: Restore
+      run: dotnet restore ${{ env.SolutionPath }}
+      
+    - name: Begin Sonar analysis
+      run: dotnet-sonarscanner begin /k:"yus-sasaki_NugetSample" /o:"yus-sasaki" /d:sonar.login="${{ secrets.SONAR_TOKEN }}" /d:sonar.host.url="https://sonarcloud.io" /d:sonar.cs.opencover.reportsPaths="**/coverage.opencover.xml"
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+        
+    - name: Build
+      run: dotnet build ${{ env.SolutionPath }} --configuration Release --no-restore
+      
+    - name: Test
+      run: dotnet test ${{ env.SolutionPath }} /p:CollectCoverage=true /p:CoverletOutputFormat=opencover
+      
+    - name: End Sonar analysis
+      run: dotnet-sonarscanner end /d:sonar.login="${{ secrets.SONAR_TOKEN }}"
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}

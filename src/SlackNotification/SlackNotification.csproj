@@ -1,0 +1,30 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>netstandard2.0</TargetFramework>
+    <PackOnBuild>true</PackOnBuild>
+    <PackageVersion>1.0.1.1</PackageVersion>
+    <Authors>sasaki_y</Authors>
+    <Copyright>sasaki_y</Copyright>
+    <NeutralLanguage>ja</NeutralLanguage>
+    <PackageLicenseUrl>https://github.com/yus-sasaki/NugetSample/blob/main/LICENSE</PackageLicenseUrl>
+    <Owners>sasaki_y</Owners>
+    <PackageProjectUrl>https://github.com/yus-sasaki/NugetSample</PackageProjectUrl>
+    <RepositoryUrl>https://github.com/yus-sasaki/NugetSample</RepositoryUrl>
+    <Summary>NugetSample_SlackNotificatio</Summary>
+    <Title>NugetSample_SlackNotificatio</Title>
+    <Description>NugetSample_SlackNotificatio</Description>
+    <PackageId>NugetSample_SlackNotification</PackageId>
+  </PropertyGroup>
+
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|AnyCPU'">
+    <DebugType>none</DebugType>
+    <DebugSymbols>false</DebugSymbols>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Newtonsoft.Json" Version="13.0.1" />
+    <PackageReference Include="System.Text.Encodings.Web" Version="5.0.1" />
+  </ItemGroup>
+
+</Project>

@@ -1,0 +1,42 @@
+name: Build
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [ main ]
+    paths: [ 'src' ]
+  pull_request:
+    branches: [ main ]
+    paths: [ 'src' ]
+
+jobs:
+  build:
+
+    runs-on: ubuntu-latest
+
+    steps:
+    - uses: actions/checkout@v2
+    - name: Setup .NET
+      uses: actions/setup-dotnet@v1
+      with:
+        dotnet-version: 3.1.x
+    - uses: actions/cache@v2
+      with:
+        path: |
+          ~/.nuget/packages
+          !~/.nuget/packages/unwanted
+        key: ${{ runner.os }}-nuget-${{ hashFiles('**/packages.lock.json') }}
+        restore-keys: |
+          ${{ runner.os }}-nuget-
+    - name: Add Source
+      run: dotnet nuget add source "https://nuget.pkg.github.com/miles-team/index.json" -n github -u ${{ secrets.NUGET_GITHUB_USER }} -p ${{ secrets.NUGET_GITHUB_TOKEN }} --store-password-in-clear-text
+    - name: Restore dependencies
+      working-directory: src
+      run: dotnet restore -s "https://api.nuget.org/v3/index.json" -s "https://nuget.pkg.github.com/miles-team/index.json"
+
+    - name: Build
+      run: dotnet build src --no-restore
+    - name: Test
+      run: dotnet test src --no-build --verbosity normal
+    - name: Run id
+      run: echo "github.run_id ${{github.run_id}}"
